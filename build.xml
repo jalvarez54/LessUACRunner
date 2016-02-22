@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="LessUACRunner" default="do.setup" basedir=".">
+
+    <tstamp>
+        <format property="currentdate" pattern="yyyy/MM/dd HH:mm:ss"/>
+    </tstamp>
+    
+    <property file="build.properties"/>
+    
+    <property name="src.path" value="${basedir}/${src.dir}"/>
+    <property name="src-rss.path" value="${basedir}/${src-rss.dir}"/>
+    <property name="src-setup.path" value="${basedir}/${src-setup.dir}"/>
+    <property name="bin.path" value="${basedir}/${bin.dir}"/>
+    <property name="lib.path" value="${basedir}/${lib.dir}"/>
+    <property name="sln.path" value="${basedir}/${sln.dir}"/>
+    <property name="exe.path" value="${basedir}/${exe.dir}"/>
+    <property name="setup.path" value="${basedir}/${setup.dir}"/>
+    <property name="setup-rss.path" value="${basedir}/${setup-rss.dir}"/>
+    
+    <filterset id="filterset.app">
+        <filter token="APP_VERSION" value="${app.version}"/>
+        <filter token="APP_RELEASE" value="${app.release}"/>
+        <filter token="APP_GUID" value="${app.guid}"/>
+        <filter token="APP_AUTHOR" value="${app.author}"/>
+        <filter token="APP_URL" value="${app.url}"/>
+        <filter token="APP_DESC" value="${app.desc}"/>
+    </filterset>
+    
+    <property environment="env"/>
+    <path id="combined-PATH">
+        <pathelement path="${env.PATH}"/>
+        <pathelement path="${env.Path}"/>
+    </path>
+    <property name="PATH" refid="combined-PATH"/>
+    
+    <target name="preload">
+        <condition property="is.lib.loaded" value="true">
+            <istrue value="${is.lib.loaded}"/>
+        </condition>
+        <condition property="is.exe.loaded" value="true">
+            <istrue value="${is.exe.loaded}"/>
+        </condition>
+        <delete dir="${lib.path}"/>
+        <mkdir dir="${lib.path}"/>
+    </target>
+    
+    <target name="clean">
+        <delete dir="${bin.path}"/>
+    </target>
+    
+    <target name="load.lib" depends="preload, load.lib.antcontrib, load.lib.msbuild, load.lib.innosetup" unless="is.lib.loaded">
+        <property name="is.lib.loaded" value="true"/>
+    </target>
+    
+    <target name="load.lib.antcontrib">
+        <echo message="Load ANT Contrib"/>
+        <get dest="${lib.path}/ant-contrib.jar" src="http://search.maven.org/remotecontent?filepath=ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3.jar"/>
+        <taskdef resource="net/sf/antcontrib/antlib.xml">
+            <classpath>
+                <pathelement location="${lib.path}/ant-contrib.jar" />
+            </classpath>
+        </taskdef>
+        <delete file="bin/.ivy_resolution_cache" failonerror="true" />
+    </target>
+    
+    <target name="load.lib.msbuild">
+        <echo message="Load MSBuild"/>
+        <property name="msbuild" value=""/>
+        <condition property="msbuild.found">
+            <and>
+                <available file="msbuild.exe" filepath="${PATH}"/>
+            </and>
+        </condition>
+        <fail message="MSBuild not found" unless="msbuild.found"/>
+        <echo message="MSBuild found!" level="info"/>
+    </target>
+    
+    <target name="load.lib.innosetup">
+        <echo message="Load InnoSetup"/>
+        <condition property="innosetup.found">
+            <and>
+                <available file="ISCC.exe" filepath="${PATH}"/>
+                <available file="Compil32.exe" filepath="${PATH}"/>
+            </and>
+        </condition>
+        <fail message="InnoSetup not found" unless="innosetup.found"/>
+        <echo message="InnoSetup found!" level="info"/>
+        
+        <copy file="${src-rss.path}/img/app.ico"
+            tofile="${setup-rss.path}/${app.name}.ico"/>
+        <copy file="${src-setup.path}/setup-mini.bmp"
+            tofile="${setup-rss.path}/setup-mini.bmp"/>
+        <copy file="${basedir}/LICENSE"
+            tofile="${setup-rss.path}/license.txt"/>
+        <copy file="${src-setup.path}/setup.iss"
+            tofile="${setup-rss.path}/${app.name}.iss">
+            <filterset refid="filterset.app" />
+        </copy>
+    </target>
+    
+    <target name="do.release" depends="clean, load.lib">
+        <mkdir dir="${sln.path}" />
+        <mkdir dir="${exe.path}" />
+        
+        <copy toDir="${sln.path}" overwrite="true">
+			<fileset dir="${basedir}" includes="${src.dir}/**"/>
+			<fileset dir="${basedir}" includes="${src.setup}/**"/>
+			<fileset file="${basedir}/${app.slnfilenname}"/>
+		</copy>
+		<copy todir="${sln.path}" failonerror="true" overwrite="true">
+			<fileset dir="${basedir}" includes="src/**/*.cs, src/**/*.csproj, src/**/*.manifest" />
+			<filterset refid="filterset.app"/>
+		</copy>
+		<exec executable="msbuild.exe" failonerror="true">
+			<arg value="/t:Build"/>
+			<arg value="/p:Configuration=Release"/>
+            <arg value="/p:OutputPath=${exe.path}"/>
+			<arg file="${sln.path}/${app.slnfilenname}"/>
+		</exec>
+        <copy file="${sln.path}/${src.dir}/LessUACRunner.Console/LessUACRunner.config"
+            tofile="${exe.path}/LessUACRunner.config"/>
+    </target>
+    
+    <target name="do.setup" depends="do.release">
+        <delete dir="${setup-rss.path}/${app.name}"/>
+        
+        <echo message="Copying executable"/>
+        <copy file="${src-setup.path}/dotnetfx35setup.exe"
+            tofile="${setup-rss.path}/${app.name}/dist/dotnetfx35setup.exe"/>
+        <copy todir="${setup-rss.path}/${app.name}">
+            <fileset dir="${exe.path}"/>
+            <fileset dir="${src-rss.path}"/>
+        </copy>
+        
+        <echo message="Compile setup"/>
+        <exec executable="ISCC.exe">
+            <arg value="/O${setup.path}"/>
+            <arg value="/F${app.name}-${app.version}.${app.release}"/>
+            <arg value="${setup-rss.path}/${app.name}.iss"/>
+        </exec>
+    </target>
+    
+</project>
