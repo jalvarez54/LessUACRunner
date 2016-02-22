@@ -28,7 +28,7 @@ Tested on :
 
 ## Download
 
-[![LessUACRunner 1.0.0.0 download](https://img.shields.io/badge/download-LessUACRunner%201.0.0.0-brightgreen.svg)](https://github.com/crazy-max/LessUACRunner/releases/download/v1.0.0.0/LessUACRunner-1.0.0.0.exe)
+[![LessUACRunner 1.0.0.1 download](https://img.shields.io/badge/download-LessUACRunner%201.0.0.1-brightgreen.svg)](https://github.com/crazy-max/LessUACRunner/releases/download/v1.0.0.1/LessUACRunner-1.0.0.1.exe)
 
 ## Changelog
 
