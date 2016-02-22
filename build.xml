@@ -134,9 +134,7 @@
         <copy file="${src-setup.path}/dotnetfx35setup.exe"
             tofile="${setup-rss.path}/${app.name}/dist/dotnetfx35setup.exe"/>
         <copy todir="${setup-rss.path}/${app.name}">
-            <fileset dir="${exe.path}">
-                <exclude name="**/*.pdb"/>
-            </fileset>
+            <fileset dir="${exe.path}"/>
             <fileset dir="${src-rss.path}">
                 <exclude name="img/**"/>
             </fileset>
