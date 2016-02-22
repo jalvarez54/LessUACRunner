@@ -112,9 +112,9 @@
 			<filterset refid="filterset.app"/>
 		</copy>
         <copy file="${src-rss.path}/img/app.ico"
-            tofile="${sln.path}/${src.dir}/LessUACRunner.Console/${app.name}.ico"/>
+            tofile="${sln.path}/${src.dir}/LessUACRunner.Console/app.ico"/>
         <copy file="${src-rss.path}/img/app.ico"
-            tofile="${sln.path}/${src.dir}/LessUACRunner.WinService/${app.name}.ico"/>
+            tofile="${sln.path}/${src.dir}/LessUACRunner.WinService/app.ico"/>
 		<exec executable="msbuild.exe" failonerror="true">
 			<arg value="/t:Build"/>
 			<arg value="/p:Configuration=Release"/>
@@ -123,6 +123,8 @@
 		</exec>
         <copy file="${sln.path}/${src.dir}/LessUACRunner.Console/LessUACRunner.config"
             tofile="${exe.path}/LessUACRunner.config"/>
+        <copy file="${src-rss.path}/img/app.ico"
+            tofile="${exe.path}/${app.name}.ico"/>    
     </target>
     
     <target name="do.setup" depends="do.release">
@@ -132,8 +134,12 @@
         <copy file="${src-setup.path}/dotnetfx35setup.exe"
             tofile="${setup-rss.path}/${app.name}/dist/dotnetfx35setup.exe"/>
         <copy todir="${setup-rss.path}/${app.name}">
-            <fileset dir="${exe.path}"/>
-            <fileset dir="${src-rss.path}"/>
+            <fileset dir="${exe.path}">
+                <exclude name="**/*.pdb"/>
+            </fileset>
+            <fileset dir="${src-rss.path}">
+                <exclude name="img/**"/>
+            </fileset>
         </copy>
         
         <echo message="Compile setup"/>
