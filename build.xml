@@ -111,6 +111,10 @@
 			<fileset dir="${basedir}" includes="src/**/*.cs, src/**/*.csproj, src/**/*.manifest" />
 			<filterset refid="filterset.app"/>
 		</copy>
+        <copy file="${src-rss.path}/img/app.ico"
+            tofile="${sln.path}/${src.dir}/LessUACRunner.Console/${app.name}.ico"/>
+        <copy file="${src-rss.path}/img/app.ico"
+            tofile="${sln.path}/${src.dir}/LessUACRunner.WinService/${app.name}.ico"/>
 		<exec executable="msbuild.exe" failonerror="true">
 			<arg value="/t:Build"/>
 			<arg value="/p:Configuration=Release"/>
