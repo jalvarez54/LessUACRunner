@@ -37,7 +37,7 @@ namespace LessUACRunner.Console
             public int ExitCode = 0;
             public string ElapsedTime = null;
         }
-        
+
         private class ControlData
         {
             public string FileName = null;
@@ -225,11 +225,11 @@ namespace LessUACRunner.Console
                 return 0;
             }
 
-            #if DEBUG
+#if DEBUG
             System.Console.Write("Press Enter to continue...");
             System.Console.ReadLine();
-            #endif
-            
+#endif
+
             if (_console)
             {
                 // DISPLAY RESULTS
@@ -240,10 +240,10 @@ namespace LessUACRunner.Console
                 System.Console.WriteLine(_jsonReturnedData);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ElapsedTime on Windows Service: {1}", DateTime.Now, _processReturnObject.ElapsedTime));
             }
-            
+
             return (_commandExitCode);
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -259,7 +259,7 @@ namespace LessUACRunner.Console
             new NamedPipeClientStream(".", pipeName, PipeDirection.In))
                 {
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
-                    
+
                     // Connect to the pipe or wait until the pipe is available.
                     string timeOut = System.Configuration.ConfigurationManager.AppSettings["PipeConnectTimeOut"];
                     try
@@ -301,7 +301,7 @@ namespace LessUACRunner.Console
             return returnData;
 
         }
-        
+
         /// <summary>
         /// Write in the pipe LESS_UAC_RUNNER-PIPE-CTL-B7C599BE-A605-4B72-8789-5CA074C86E69 the applicaion name to launch.
         /// https://msdn.microsoft.com/en-us/library/system.io.pipes.namedpipeclientstream%28v=vs.110%29.aspx
@@ -313,7 +313,7 @@ namespace LessUACRunner.Console
                 new NamedPipeClientStream(".", pipeName, PipeDirection.Out))
             {
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
-                
+
                 // Connect to the pipe or wait until the pipe is available.
                 string timeOut = System.Configuration.ConfigurationManager.AppSettings["PipeConnectTimeOut"];
                 try
@@ -412,7 +412,7 @@ namespace LessUACRunner.Console
             }
 
         }
-        
+
         private static void ChoiceConfigDelete(string[] args)
         {
             if (_argCount != 2)
@@ -441,7 +441,7 @@ namespace LessUACRunner.Console
                 return;
             }
         }
-        
+
         private static void ChoiceStart()
         {
             if (_argCount != 1)
@@ -479,7 +479,7 @@ namespace LessUACRunner.Console
                 return;
             }
         }
-        
+
         private static void ChoiceStop()
         {
             if (_argCount != 1)
@@ -518,13 +518,13 @@ namespace LessUACRunner.Console
                 return;
             }
         }
-        
+
         private static void ChoiceRestart()
         {
             ChoiceStop();
             ChoiceStart();
         }
-        
+
         private static void ChoiceInstall()
         {
             if (_argCount != 1)
@@ -553,7 +553,7 @@ namespace LessUACRunner.Console
             }
 
         }
-        
+
         private static void ChoiceUnInstall()
         {
             if (_argCount != 1)
@@ -579,7 +579,7 @@ namespace LessUACRunner.Console
                 ShowMessage("ChoiceUnInstall", "action non autorisée", true);
             }
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -611,7 +611,7 @@ namespace LessUACRunner.Console
                 return;
             }
         }
-        
+
         private static void ChoiceListApp()
         {
             if (_argCount != 1)
@@ -632,7 +632,7 @@ namespace LessUACRunner.Console
                 ShowMessage("ChoiceListApp", "liste vide utiliser -configa pour ajouter une application", true);
             }
         }
-        
+
         private static void ChoiceService()
         {
             if (_argCount != 1)
@@ -651,7 +651,7 @@ namespace LessUACRunner.Console
             }
 
         }
-        
+
         private static void ChoiceHelp()
         {
             if (_argCount != 1)
@@ -687,7 +687,7 @@ namespace LessUACRunner.Console
             System.Console.WriteLine("\t* \t {0}", "(Must be RunAS Administrator)");
             System.Console.WriteLine("\t** \t {0}", "(Must be approved in App.config)");
         }
-        
+
         private static void ChoiceInfo()
         {
             System.Console.WriteLine("===============");
@@ -713,7 +713,7 @@ namespace LessUACRunner.Console
             System.Console.WriteLine("========================================");
             GetVersionFromRegistry();
         }
-        
+
         private static void ChoiceRunTheProcess(string[] args)
         {
             // Command exemple: shortcut "c:\sample.txt" -console or shortcut "c:\sample.txt" or shortcut
@@ -758,11 +758,16 @@ namespace LessUACRunner.Console
                     controlData.PipeName = _section.AllowedApps[args[0]].Console ? pipeName : null;
                     controlData.Arguments = _section.AllowedApps[args[0]].Args;
 
+                    // Hook stored arguments if dynamicArgument != string.Empty
+                    // Inline arguments to console #1 
+                    string dynamicArgument = args.Length == 2 ? args[1] : string.Empty;
+                    controlData.Arguments = dynamicArgument == "" ? _section.AllowedApps[args[0]].Args : dynamicArgument;
+
                     if (File.Exists(_section.AllowedApps[args[0]].Path))
-                    {                    
+                    {
                         //////// WRITE PROCESS NAME TO LAUNCHED IN CNP)
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling WriteApplicationNameInPipe arg={1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
-                        
+
                         var json = new JavaScriptSerializer().Serialize(controlData);
                         WriteApplicationNameInPipe(json);
                         ///////////////////////////////////////////////////////////////////////
@@ -823,7 +828,7 @@ namespace LessUACRunner.Console
                 return true;
             }
         }
-        
+
         private static bool IsRunning()
         {
             using (ServiceController controller =
@@ -833,7 +838,7 @@ namespace LessUACRunner.Console
                 return (controller.Status == ServiceControllerStatus.Running);
             }
         }
-        
+
         /// <summary>
         ///
         /// </summary>
@@ -851,7 +856,7 @@ namespace LessUACRunner.Console
             installer.UseNewContext = true;
             return installer;
         }
-        
+
         private static void InstallService()
         {
             if (IsInstalled()) return;
@@ -883,7 +888,7 @@ namespace LessUACRunner.Console
                 throw;
             }
         }
-        
+
         private static void UninstallService()
         {
             if (!IsInstalled()) return;
@@ -907,7 +912,7 @@ namespace LessUACRunner.Console
                 throw;
             }
         }
-        
+
         private static void StartService()
         {
             if (!IsInstalled()) return;
@@ -930,7 +935,7 @@ namespace LessUACRunner.Console
                 }
             }
         }
-        
+
         private static void StopService()
         {
             if (!IsInstalled()) return;
@@ -989,7 +994,7 @@ namespace LessUACRunner.Console
 
             return;
         }
-        
+
         // https://technet.microsoft.com/en-us/library/bb490995.aspx
         [Obsolete]
         private static void uninstall()
@@ -1026,7 +1031,7 @@ namespace LessUACRunner.Console
             Trace.WriteLine("TraceSwitch.Level: " + _traceSwitch.Level);
             Trace.WriteLine("");
         }
-        
+
         private static string WmiGetVersion()
         {
             string version = string.Empty;
@@ -1047,7 +1052,7 @@ namespace LessUACRunner.Console
             }
             return version;
         }
-        
+
         private static void GetVersionFromRegistry()
         {
             // Opens the registry key for the .NET Framework entry.
@@ -1107,7 +1112,7 @@ namespace LessUACRunner.Console
                 }
             }
         }
-        
+
         private static string FrameWorkVersion()
         {
             string version = Assembly
@@ -1116,7 +1121,7 @@ namespace LessUACRunner.Console
                      .Where(x => x.Name == "System.Core").First().Version.ToString();
             return version;
         }
-        
+
         /// <summary>
         /// Use DataProtectionConfigurationProvider.
         /// </summary>
@@ -1178,9 +1183,9 @@ namespace LessUACRunner.Console
                     ShowMessage("EncryptAppSettings", ex.Message, false);
                     _commandExitCode = -1;
                 }
-                #if DEBUG
+#if DEBUG
                 Process.Start("notepad.exe", _configuration.FilePath);
-                #endif
+#endif
             }
             catch (Exception ex)
             {
@@ -1188,7 +1193,7 @@ namespace LessUACRunner.Console
                 _commandExitCode = -1;
             }
         }
-        
+
         private static bool IsEncrypted()
         {
             System.Reflection.Assembly asem = System.Reflection.Assembly.GetExecutingAssembly();
@@ -1201,7 +1206,7 @@ namespace LessUACRunner.Console
 
             return _section.SectionInformation.IsProtected;
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -1210,7 +1215,7 @@ namespace LessUACRunner.Console
         {
             return (new WindowsPrincipal(WindowsIdentity.GetCurrent())).IsInRole(WindowsBuiltInRole.Administrator);
         }
-        
+
         /// <summary>
         /// Display message (true) or error (false)
         /// </summary>

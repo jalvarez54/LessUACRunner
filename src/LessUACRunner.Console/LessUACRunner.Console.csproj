@@ -130,7 +130,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="app.ico" />
-    <Content Include="uac.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LessUACRunner.WinService\LessUACRunner.WinService.csproj">
