@@ -150,23 +150,24 @@ namespace LessUACRunner.Console
                 // If not encypted permit only -encrypt, -help and -install
                 if (!IsEncrypted() && args[0] != "-encrypt" && args[0] != "-help" && args[0] != "-install")
                 {
-                    ShowMessage("Main", "!!! LE FICHIER N'EST PAS CRYPTE !!!", true);
+                    SetAndShowError("Main", WinService.MeErrorCode.ERROR_FileNotCrypted, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main IsEncrypted ?: {1}", DateTime.Now, IsAdmin()));
-                    return 0;
+                    return _commandExitCode;
                 }
             }
 
             if (!IsInstalled())
             {
-                ShowMessage("Main", "Le service est introuvable sur l'ordinateur", true);
+                SetAndShowError("Main", WinService.MeErrorCode.ERROR_ServiceNotInstalled, true);
                 ShowMessage("Main", "Certaines commandes ne peuvent fonctionner si le service n'est pas installé\n", true);
+                // Non fatal error
             }
 
             _argCount = args.Count();
             if (_argCount > 4)
             {
-                ShowMessage("Main", "trop d'arguments", true);
-                return 0;
+                SetAndShowError("Main", WinService.MeErrorCode.ERROR_NumArguments, true);
+                return _commandExitCode;
             }
 
             if (!(_argCount == 0))
@@ -221,8 +222,8 @@ namespace LessUACRunner.Console
             }
             else
             {
-                ShowMessage("Main", "au moins un argument est requis", true);
-                return 0;
+                SetAndShowError("Main", WinService.MeErrorCode.ERROR_NumArguments, true);
+                return _commandExitCode;
             }
 
 #if DEBUG
@@ -245,10 +246,10 @@ namespace LessUACRunner.Console
         }
 
         /// <summary>
-        /// 
+        /// Return data read on pipe
         /// </summary>
         /// <param name="pipeName"></param>
-        /// <returns></returns>
+        /// <returns>On error return string empty</returns>
         private static string ReadReturnFromPipe(string pipeName)
         {
             string returnData = string.Empty;
@@ -269,16 +270,15 @@ namespace LessUACRunner.Console
                     }
                     catch (System.TimeoutException ex)
                     {
-                        ShowMessage("ReadReturnFromPipe", ex.Message + " après " + timeOut + "ms. Lancer/Relancer le service !", false);
+                        SetAndShowError("ReadReturnFromPipe", WinService.MeErrorCode.ERROR_NPConnectTimeOut, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
-
                         return string.Empty;
                     }
                     catch (Exception ex)
                     {
                         ShowMessage("ReadReturnFromPipe", ex.Message, false);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
-
+                        _commandExitCode = -1;
                         return string.Empty;
                     }
 
@@ -296,7 +296,10 @@ namespace LessUACRunner.Console
             }
             catch (Exception ex)
             {
+                ShowMessage("ReadReturnFromPipe", ex.Message, false);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
+                _commandExitCode = -1;
+                return string.Empty;
             }
             return returnData;
 
@@ -307,7 +310,8 @@ namespace LessUACRunner.Console
         /// https://msdn.microsoft.com/en-us/library/system.io.pipes.namedpipeclientstream%28v=vs.110%29.aspx
         /// </summary>
         /// <param name="applicationName"></param>
-        private static void WriteApplicationNameInPipe(string applicationName)
+        /// <returns>on error return false, else true</returns>
+        private static bool WriteApplicationNameInPipe(string applicationName)
         {
             using (NamedPipeClientStream pipeClient =
                 new NamedPipeClientStream(".", pipeName, PipeDirection.Out))
@@ -320,13 +324,17 @@ namespace LessUACRunner.Console
                 {
                     pipeClient.Connect(int.Parse(timeOut));
                 }
-                catch (System.TimeoutException ex)
+                catch (System.TimeoutException)
                 {
-                    ShowMessage("WriteApplicationNameInPipe", ex.Message + " après " + timeOut + "ms. Lancer/Relancer le service !", false);
+                    SetAndShowError("WriteApplicationNameInPipe", WinService.MeErrorCode.ERROR_NPConnectTimeOut, true);
+                    return false;
                 }
                 catch (Exception ex)
                 {
                     ShowMessage("WriteApplicationNameInPipe", ex.Message, false);
+                    _commandExitCode = -1;
+                    return false;
+
                 }
 
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe connected to pipe: {1}", DateTime.Now, pipeName));
@@ -339,6 +347,7 @@ namespace LessUACRunner.Console
                     sw.WriteLine(applicationName);
                 }
             }
+            return true;
         }
         #endregion
 
@@ -357,7 +366,7 @@ namespace LessUACRunner.Console
 
                 if (_argCount < 2)
                 {
-                    ShowMessage("ChoiceConfigAdd", "nombre d'arguments incorrect", true);
+                    SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NumArguments, true);
                     return;
                 }
                 // -configa [shortcut] "path/file" [arguments] [-console]
@@ -375,7 +384,7 @@ namespace LessUACRunner.Console
                 {
                     if (_argCount < 3)
                     {
-                        ShowMessage("ChoiceConfigAdd", "nombre d'arguments incorrect", true);
+                        SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NumArguments, true);
                         return;
                     }
                     // -configa [shortcut] "path/file" [arguments] [-console]
@@ -387,8 +396,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        // Error
-                        ShowMessage("ChoiceConfigAdd", "le fichier n'existe pas", true);
+                        SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_FileNotFound, true);
                         return;
                     }
                 }
@@ -401,13 +409,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    ShowMessage("ChoiceConfigAdd", string.Format("la clé existe déja", ae.Shortcut), true);
+                    SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_KeyExist, true);
                     return;
                 }
             }
             else
             {
-                ShowMessage("ChoiceConfigAdd", "action non autorisée", true);
+                SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -417,7 +425,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 2)
             {
-                ShowMessage("ChoiceConfigDelete", "trop d'arguments", true);
+                SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -431,13 +439,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    ShowMessage("ChoiceConfigDelete", "cette clé n'existe pas", true);
+                    SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_KeyNotExist, true);
                     return;
                 }
             }
             else
             {
-                ShowMessage("ChoiceConfigDelete", "action non autorisée", true);
+                SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -446,7 +454,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceStart", "trop d'arguments", true);
+                SetAndShowError("ChoiceStart", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -475,7 +483,7 @@ namespace LessUACRunner.Console
             }
             else
             {
-                ShowMessage("ChoiceStart", "action non autorisée", true);
+                SetAndShowError("ChoiceStart", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -484,7 +492,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceStop", "trop d'arguments", true);
+                SetAndShowError("ChoiceStop", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -510,11 +518,12 @@ namespace LessUACRunner.Console
                 catch (Exception e)
                 {
                     ShowMessage("ChoiceStop", "exception " + e.Message, false);
+                    _commandExitCode = -1;
                 }
             }
             else
             {
-                ShowMessage("ChoiceStop", "action non autorisée", true);
+                SetAndShowError("ChoiceStop", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -529,7 +538,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceInstall", "trop d'arguments", true);
+                SetAndShowError("ChoiceInstall", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -537,18 +546,38 @@ namespace LessUACRunner.Console
             {
                 if (!IsInstalled())
                 {
-                    InstallService();
-                    StartService();
+                    try
+                    {
+                        InstallService();
+
+                    }
+                    catch (Exception e)
+                    {
+                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        _commandExitCode = -1;
+                        return;
+                    }
+                    try
+                    {
+                        StartService();
+
+                    }
+                    catch (Exception e)
+                    {
+                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        _commandExitCode = -1;
+                        return;
+                    }
                 }
                 else
                 {
-                    ShowMessage("ChoiceInstall", "service already installed", true);
+                    ShowMessage("ChoiceInstall", "service déja installé", true);
                     return;
                 }
             }
             else
             {
-                ShowMessage("ChoiceInstall", "action non autorisée", true);
+                SetAndShowError("ChoiceInstall", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -558,7 +587,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceUnInstall", "trop d'arguments", true);
+                SetAndShowError("ChoiceUnInstall", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -566,17 +595,35 @@ namespace LessUACRunner.Console
             {
                 if (IsInstalled())
                 {
-                    StopService();
-                    UninstallService();
+                    try
+                    {
+                        StopService();
+
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        UninstallService();
+
+                    }
+                    catch (Exception e)
+                    {
+                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        _commandExitCode = -1;
+                        return;
+                    }
                 }
                 else
                 {
-                    ShowMessage("ChoiceUnInstall", "service already uninstalled", true);
+                    ShowMessage("ChoiceUnInstall", "service déja désinstallé", true);
+                    return;
                 }
             }
             else
             {
-                ShowMessage("ChoiceUnInstall", "action non autorisée", true);
+                SetAndShowError("ChoiceUnInstall", WinService.MeErrorCode.ERROR_NotAllowed, true);
             }
         }
 
@@ -588,7 +635,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceEncryptDecrypt", "trop d'arguments", true);
+                SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
 
@@ -602,12 +649,12 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    ShowMessage("ChoiceEncryptDecrypt", "file not found " + fileName, true);
+                    SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_FileNotFound, true);
                 }
             }
             else
             {
-                System.Console.WriteLine("Action non autorisée");
+                SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -616,7 +663,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceListApp", "trop d'arguments", true);
+                SetAndShowError("ChoiceListApp", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
             if (_section.AllowedApps.Count != 0)
@@ -629,7 +676,7 @@ namespace LessUACRunner.Console
             }
             else
             {
-                ShowMessage("ChoiceListApp", "liste vide utiliser -configa pour ajouter une application", true);
+                SetAndShowError("ChoiceListApp", WinService.MeErrorCode.ERROR_ListEmpty, true);
             }
         }
 
@@ -637,7 +684,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                ShowMessage("ChoiceService", "trop d'arguments", true);
+                SetAndShowError("ChoiceService", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
             try
@@ -730,7 +777,7 @@ namespace LessUACRunner.Console
             }
             if (_argCount > 2)
             {
-                ShowMessage("ChoiceRunTheProcess", "trop d'arguments pour lancer une application", true);
+                SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_NumArguments, true);
                 return;
             }
             try
@@ -742,7 +789,7 @@ namespace LessUACRunner.Console
                 }
                 if (!isShortcutExist)
                 {
-                    ShowMessage("ChoiceRunTheProcess", "Sorry you cannot run this application !", true);
+                    SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_NotAllowed, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess Sorry you cannot run this application in admin mode !", DateTime.Now));
                     return;
                 }
@@ -769,33 +816,40 @@ namespace LessUACRunner.Console
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling WriteApplicationNameInPipe arg={1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
 
                         var json = new JavaScriptSerializer().Serialize(controlData);
-                        WriteApplicationNameInPipe(json);
-                        ///////////////////////////////////////////////////////////////////////
-
-                        //////// READ PROCESS RETURN FROM DNP)
-                        // If -console we must connect to (DNP) / Read the content / Print the content to stdout / exit with PROCESS exitcode
-                        _console = _section.AllowedApps[args[0]].Console;
-                        if (_console)
+                        if (WriteApplicationNameInPipe(json))
                         {
-                            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling ReadReturnFromPipe arg={1}", DateTime.Now, pipeName));
+                            ///////////////////////////////////////////////////////////////////////
 
-                            _jsonReturnedData = ReadReturnFromPipe(pipeName);
-                            if (_jsonReturnedData != string.Empty)
+                            //////// READ PROCESS RETURN FROM DNP)
+                            // If -console we must connect to (DNP) / Read the content / Print the content to stdout / exit with PROCESS exitcode
+                            _console = _section.AllowedApps[args[0]].Console;
+                            if (_console)
                             {
-                                // Extraction:
-                                _processReturnObject = new JavaScriptSerializer().Deserialize<ProcessReturn>(_jsonReturnedData);
-                                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess read returnedData: {1}", DateTime.Now, _jsonReturnedData));
+                                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling ReadReturnFromPipe arg={1}", DateTime.Now, pipeName));
+
+                                _jsonReturnedData = ReadReturnFromPipe(pipeName);
+                                if (_jsonReturnedData != string.Empty)
+                                {
+                                    // Extraction:
+                                    _processReturnObject = new JavaScriptSerializer().Deserialize<ProcessReturn>(_jsonReturnedData);
+                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess read returnedData: {1}", DateTime.Now, _jsonReturnedData));
+                                }
+                                else
+                                {
+                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess nothing returned or error", DateTime.Now));
+                                    return;
+                                }
                             }
-                            else
-                            {
-                                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess nothing returned or error", DateTime.Now));
-                            }
+                            /////////////////////////////////////////////////////////////////////// 
                         }
-                        ///////////////////////////////////////////////////////////////////////
+                        else
+                        {
+                            return;
+                        }
                     }
                     else
                     {
-                        ShowMessage("ChoiceRunTheProcess", "file " + _section.AllowedApps[args[0]].Path + " unreachable !", true);
+                        SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_FileNotFound, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess file unreachable: {1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
                         return;
                     }
@@ -805,6 +859,7 @@ namespace LessUACRunner.Console
             {
                 ShowMessage("ChoiceRunTheProcess", e.Message, false);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess exception: {1}", DateTime.Now, e.Message));
+                _commandExitCode = -1;
             }
             Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: >>>>> ChoiceRunTheProcess job ended successfully", DateTime.Now));
         }
@@ -1134,12 +1189,12 @@ namespace LessUACRunner.Console
 
                 if (encrypt && _section.SectionInformation.IsProtected)
                 {
-                    ShowMessage("EncryptAppSettings", "section is already protected", true);
+                    SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_SectionAlreadyProtected, true);
                     return;
                 }
                 if (!encrypt && !_section.SectionInformation.IsProtected)
                 {
-                    ShowMessage("EncryptAppSettings", "section is already unprotected", true);
+                    SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_SectionAlreadyNotProtected, true);
                     return;
                 }
                 if (encrypt && !_section.SectionInformation.IsProtected)
@@ -1200,7 +1255,7 @@ namespace LessUACRunner.Console
             string fileName = asem.Location;
             if (!File.Exists(fileName))
             {
-                ShowMessage("IsEncrypted", "file not found " + fileName, true);
+                SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_FileNotFound, true);
                 return false;
             }
 
@@ -1220,8 +1275,7 @@ namespace LessUACRunner.Console
         /// Display message (true) or error (false)
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="type">true = message false = 
-        /// error</param>
+        /// <param name="type">true = message false = error</param>
         private static void ShowMessage(string source, string message, bool type)
         {
             switch (type)
@@ -1236,6 +1290,19 @@ namespace LessUACRunner.Console
                     break;
             }
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="errorCode"></param>
+        /// <param name="type">true = message false = error</param>
+        private static void SetAndShowError(string source, WinService.MeErrorCode errorCode, bool type)
+        {
+            _commandExitCode = (int)errorCode;
+            ShowMessage(source, WinService.LessError.GetEnumDescription(errorCode), type);
+
+        }
+
         #endregion
     }
 }
