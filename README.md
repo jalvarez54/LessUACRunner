@@ -66,7 +66,7 @@ Administrator privileges:
 
 ## Download
 
-[![LessUACRunner 1.0.0.1 download](https://img.shields.io/badge/download-LessUACRunner%201.0.0.1-brightgreen.svg)](https://github.com/crazy-max/LessUACRunner/releases/download/v1.0.0.1/LessUACRunner-1.0.0.1.exe)
+[![LessUACRunner 1.0.0.2 download](https://img.shields.io/badge/download-LessUACRunner%201.0.0.2-brightgreen.svg)](https://github.com/crazy-max/LessUACRunner/releases/download/v1.0.0.2/LessUACRunner-1.0.0.2.exe)
 
 ## Changelog
 
