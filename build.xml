@@ -18,6 +18,7 @@
     <property name="setup-rss.path" value="${basedir}/${setup-rss.dir}"/>
     
     <filterset id="filterset.app">
+        <filter token="APP_NAME" value="${app.name}"/>
         <filter token="APP_VERSION" value="${app.version}"/>
         <filter token="APP_RELEASE" value="${app.release}"/>
         <filter token="APP_GUID" value="${app.guid}"/>
@@ -108,7 +109,7 @@
 			<fileset file="${basedir}/${app.slnfilenname}"/>
 		</copy>
 		<copy todir="${sln.path}" failonerror="true" overwrite="true">
-			<fileset dir="${basedir}" includes="src/**/*.cs, src/**/*.csproj, src/**/*.manifest" />
+			<fileset dir="${basedir}" includes="src/**/*.cs, src/**/*.csproj, src/**/*.manifest, src/**/*.config" />
 			<filterset refid="filterset.app"/>
 		</copy>
         <copy file="${src-rss.path}/img/app.ico"

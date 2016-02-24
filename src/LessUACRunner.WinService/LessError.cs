@@ -7,31 +7,29 @@ using System.Text;
 
 namespace LessUACRunner.WinService
 {
-    public enum MeErrorCode
+    public enum ErrorCode
     {
-        [Description("fichier non trouvé")]
+        [Description("File not found")]
         ERROR_FileNotFound = 10000,
-        [Description("fichier de configuration corrompu")]
+        [Description("Configuration file corrupted")]
         ERROR_FileCorrupted,
-        [Description("nombre d'arguments incorrect")]
-        ERROR_NumArguments,
-        [Description("la clé existe déja")]
+        [Description("Invalid arguments")]
+        ERROR_InvalidArguments,
+        [Description("Key already exist")]
         ERROR_KeyExist,
-        [Description("la clé n'existe pas")]
+        [Description("Key does not exist")]
         ERROR_KeyNotExist,
-        [Description("action non autorisée")]
+        [Description("Unauthorized action")]
         ERROR_NotAllowed,
-        [Description("liste vide utiliser -configa pour ajouter une application")]
-        ERROR_ListEmpty,
-        [Description("section déja protégée")]
+        [Description("Section already protected")]
         ERROR_SectionAlreadyProtected,
-        [Description("section déja non protégée")]
+        [Description("Section still unprotected")]
         ERROR_SectionAlreadyNotProtected,
         [Description("n'a pas pu se connecter au serveur dans le timeout spécifié")]
         ERROR_NPConnectTimeOut,
-        [Description("le fichier n'est pas crypté")]
+        [Description("File not encrypted")]
         ERROR_FileNotCrypted,
-        [Description("le service est introuvable sur l'ordinateur")]
+        [Description("Service not found")]
         ERROR_ServiceNotInstalled,
     }
 
@@ -40,17 +38,14 @@ namespace LessUACRunner.WinService
         // http://blog.spontaneouspublicity.com/associating-strings-with-enums-in-c
         public static string GetEnumDescription(Enum value)
         {
-
             FieldInfo fi = value.GetType().GetField(value.ToString());
-
             DescriptionAttribute[] attributes =
                 (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-
             if (attributes != null && attributes.Length > 0)
+            {
                 return attributes[0].Description;
-            else
-                return value.ToString();
-
+            }
+            return value.ToString();
         }
 
     }

@@ -25,7 +25,6 @@ namespace LessUACRunner.Console
         private const string commandExeName = "LessUACRunnerConsole.exe";
         private const string serviceExeName = "LessUACRunnerService.exe";
         private const string pipeName = "LESS_UAC_RUNNER-PIPE-CTL-B7C599BE-A605-4B72-8789-5CA074C86E69";
-        private const string serviceName = "LessUACRunnerService";
         private const string sectionName = "lessUACRunner";
         #endregion
 
@@ -56,6 +55,7 @@ namespace LessUACRunner.Console
         private static ServiceController _serviceController;
         private static int _argCount;
         private static string _baseDirectory;
+        private static string _serviceName;
         private static string _serviceInstallerLogFileName;
         private static string _logsFolderName;
         private static string _ConsoleAssemblyName;
@@ -91,7 +91,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception)
             {
-                ShowMessage("Main", "Le fichier de configuration est corrompu", false);
+                SetAndShowError("Main", WinService.ErrorCode.ERROR_FileCorrupted, true);
                 return -1;
             }
             _section = _configuration.GetSection(sectionName) as AllowedAppsSection;
@@ -100,15 +100,15 @@ namespace LessUACRunner.Console
             _baseDirectory = System.AppDomain.CurrentDomain.BaseDirectory;
             _commandPath = string.Format(@"{0}\{1}", _baseDirectory, commandExeName);
             _servicePath = string.Format(@"{0}\{1}", _baseDirectory, serviceExeName);
-            _logsFolderName = "Logs";
-            _serviceInstallerLogFileName = "LessUACRunnerServiceInstaller.log";
-            _serviceController = new ServiceController(serviceName);
+            _logsFolderName = "logs";
+            _serviceName = System.Configuration.ConfigurationManager.AppSettings["ServiceDisplayName"];
+            _serviceInstallerLogFileName = "serviceInstall.log";
+            _serviceController = new ServiceController(_serviceName);
 
             Trace.WriteLineIf(_traceSwitch.TraceVerbose, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: OS VERSION: {1}", DateTime.Now, Environment.OSVersion.ToString()));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: OS VERSION VIA WMI: {1}", DateTime.Now, WmiGetVersion()));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: .NET FRAMEWORK VERSION: {1}", DateTime.Now, FrameWorkVersion()));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: CLR VERSION: {1}", DateTime.Now, Environment.Version.ToString()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: OS : {1}", DateTime.Now, Environment.OSVersion.ToString()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: .NET Framework : {1}", DateTime.Now, FrameWorkVersion()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: CLR : {1}", DateTime.Now, Environment.Version.ToString()));
             try
             {
                 _ConsoleAssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -150,7 +150,7 @@ namespace LessUACRunner.Console
                 // If not encypted permit only -encrypt, -help and -install
                 if (!IsEncrypted() && args[0] != "-encrypt" && args[0] != "-help" && args[0] != "-install")
                 {
-                    SetAndShowError("Main", WinService.MeErrorCode.ERROR_FileNotCrypted, true);
+                    SetAndShowError("Main", WinService.ErrorCode.ERROR_FileNotCrypted, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main IsEncrypted ?: {1}", DateTime.Now, IsAdmin()));
                     return _commandExitCode;
                 }
@@ -158,19 +158,12 @@ namespace LessUACRunner.Console
 
             if (!IsInstalled())
             {
-                SetAndShowError("Main", WinService.MeErrorCode.ERROR_ServiceNotInstalled, true);
-                ShowMessage("Main", "Certaines commandes ne peuvent fonctionner si le service n'est pas installé\n", true);
-                // Non fatal error
+                SetAndShowError("Main", WinService.ErrorCode.ERROR_ServiceNotInstalled, true);
+                ShowMessage("WARNING: Service not installed\n");
             }
 
             _argCount = args.Count();
-            if (_argCount > 4)
-            {
-                SetAndShowError("Main", WinService.MeErrorCode.ERROR_NumArguments, true);
-                return _commandExitCode;
-            }
-
-            if (!(_argCount == 0))
+            if (_argCount > 0)
             {
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main Choice: {1}", DateTime.Now, args[0]));
 
@@ -203,17 +196,17 @@ namespace LessUACRunner.Console
                     case "-decrypt":
                         ChoiceEncryptDecrypt(false);
                         break;
-                    case "-listapp":
-                        ChoiceListApp();
+                    case "-list":
+                        ChoiceList();
                         break;
-                    case "-service":
-                        ChoiceService();
+                    case "-status":
+                        ChoiceStatus();
                         break;
                     case "-help":
                         ChoiceHelp();
                         break;
-                    case "-info":
-                        ChoiceInfo();
+                    case "-version":
+                        ChoiceVersion();
                         break;
                     default:
                         ChoiceRunTheProcess(args);
@@ -222,22 +215,11 @@ namespace LessUACRunner.Console
             }
             else
             {
-                SetAndShowError("Main", WinService.MeErrorCode.ERROR_NumArguments, true);
-                return _commandExitCode;
+                ChoiceHelp();
             }
-
-#if DEBUG
-            System.Console.Write("Press Enter to continue...");
-            System.Console.ReadLine();
-#endif
 
             if (_console)
             {
-                // DISPLAY RESULTS
-                //Console.Error.WriteLine(_processReturnObject.StdError);
-                //Console.WriteLine(_processReturnObject.StdOut);
-                //Trace.WriteLineIf(traceSwitch.TraceVerbose, string.Format("{0}: ElapsedTime on Windows Service: {1}", DateTime.Now, _processReturnObject.ElapsedTime));
-                //return _processReturnObject.ExitCode;
                 System.Console.WriteLine(_jsonReturnedData);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ElapsedTime on Windows Service: {1}", DateTime.Now, _processReturnObject.ElapsedTime));
             }
@@ -256,8 +238,7 @@ namespace LessUACRunner.Console
 
             try
             {
-                using (NamedPipeClientStream pipeClient =
-            new NamedPipeClientStream(".", pipeName, PipeDirection.In))
+                using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.In))
                 {
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
 
@@ -270,7 +251,7 @@ namespace LessUACRunner.Console
                     }
                     catch (System.TimeoutException ex)
                     {
-                        SetAndShowError("ReadReturnFromPipe", WinService.MeErrorCode.ERROR_NPConnectTimeOut, true);
+                        SetAndShowError("ReadReturnFromPipe", WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                         return string.Empty;
                     }
@@ -326,7 +307,7 @@ namespace LessUACRunner.Console
                 }
                 catch (System.TimeoutException)
                 {
-                    SetAndShowError("WriteApplicationNameInPipe", WinService.MeErrorCode.ERROR_NPConnectTimeOut, true);
+                    SetAndShowError("WriteApplicationNameInPipe", WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
                     return false;
                 }
                 catch (Exception ex)
@@ -334,7 +315,6 @@ namespace LessUACRunner.Console
                     ShowMessage("WriteApplicationNameInPipe", ex.Message, false);
                     _commandExitCode = -1;
                     return false;
-
                 }
 
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe connected to pipe: {1}", DateTime.Now, pipeName));
@@ -353,11 +333,11 @@ namespace LessUACRunner.Console
 
         #region Command line parser methods
         /// <summary>
-        /// -configa "path/filename"
-        /// -configa shortcut "path/filename"
-        /// -configa "path/filename" / "filename arguments"
+        /// -configa app_path
+        /// -configa shortcut app_path
+        /// -configa app_path app_args
         /// </summary>
-        /// <param name="args">[shortcut] path/filename</param>
+        /// <param name="args">[shortcut] app_path</param>
         private static void ChoiceConfigAdd(string[] args)
         {
             if (IsAdmin())
@@ -366,28 +346,28 @@ namespace LessUACRunner.Console
 
                 if (_argCount < 2)
                 {
-                    SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NumArguments, true);
+                    SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_InvalidArguments, true);
                     return;
                 }
-                // -configa [shortcut] "path/file" [arguments] [-console]
+                // -configa [shortcut] app_path [app_args] [-console]
                 ae.Console = args.Contains<string>("-console");
 
-                // -configa "path/file" [arguments] [-console]
+                // -configa app_path [app_args] [-console]
                 if (File.Exists(args[1]))
                 {
                     ae.Shortcut = Path.GetFileNameWithoutExtension(args[1]);
                     ae.Path = args[1];
                     ae.Args = (_argCount == 3) ? args[2] : string.Empty;
                 }
-                // -configa [shortcut] "path/file" [arguments] [-console]
+                // -configa [shortcut] app_path [app_args] [-console]
                 else
                 {
                     if (_argCount < 3)
                     {
-                        SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NumArguments, true);
+                        SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_InvalidArguments, true);
                         return;
                     }
-                    // -configa [shortcut] "path/file" [arguments] [-console]
+                    // -configa [shortcut] app_path [app_args] [-console]
                     if (File.Exists(args[2]))
                     {
                         ae.Path = args[2];
@@ -396,7 +376,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_FileNotFound, true);
+                        SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_FileNotFound, true);
                         return;
                     }
                 }
@@ -409,13 +389,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_KeyExist, true);
+                    SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_KeyExist, true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceConfigAdd", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -425,7 +405,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 2)
             {
-                SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -439,13 +419,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_KeyNotExist, true);
+                    SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_KeyNotExist, true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceConfigDelete", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -454,7 +434,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceStart", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceStart", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -465,15 +445,15 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        // Start the service if the current status is stopped.
-                        ShowMessage("ChoiceStart", "starting the Me.LoaderService service...", true);
-
+                        ShowMessage("ChoiceStart", "Starting service...", true);
                         _serviceController.Start();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Running);
-                        ShowMessage("ChoiceStart", "service status " + _serviceController.Status, true);
+                        ShowMessage("ChoiceStart", "Service status: " + _serviceController.Status, true);
                     }
-                    else ShowMessage("ChoiceStart", "service is already stopped !", true);
-
+                    else
+                    {
+                        ShowMessage("ChoiceStart", "Service already started", true);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -483,7 +463,7 @@ namespace LessUACRunner.Console
             }
             else
             {
-                SetAndShowError("ChoiceStart", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceStart", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -492,7 +472,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceStop", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceStop", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -503,16 +483,16 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        ShowMessage("ChoiceStop", "service is already stopped !", true);
+                        ShowMessage("ChoiceStop", "Service already stopped", true);
                     }
                     else
                     {
                         // Stop the service if its status is not set to "Stopped".
-                        ShowMessage("ChoiceStart", "stopping the Me.LoaderService service...", true);
+                        ShowMessage("ChoiceStart", "Stopping service...", true);
                         WriteApplicationNameInPipe("-killThread");
                         _serviceController.Stop();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
-                        ShowMessage("ChoiceStop", "service status " + _serviceController.Status, true);
+                        ShowMessage("ChoiceStop", "Service status: " + _serviceController.Status, true);
                     }
                 }
                 catch (Exception e)
@@ -523,7 +503,7 @@ namespace LessUACRunner.Console
             }
             else
             {
-                SetAndShowError("ChoiceStop", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceStop", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -538,7 +518,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceInstall", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceInstall", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -571,13 +551,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    ShowMessage("ChoiceInstall", "service déja installé", true);
+                    ShowMessage("ChoiceInstall", "Service already installed", true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceInstall", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceInstall", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -587,7 +567,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceUnInstall", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceUnInstall", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -598,7 +578,6 @@ namespace LessUACRunner.Console
                     try
                     {
                         StopService();
-
                     }
                     catch (Exception)
                     {
@@ -606,7 +585,6 @@ namespace LessUACRunner.Console
                     try
                     {
                         UninstallService();
-
                     }
                     catch (Exception e)
                     {
@@ -617,13 +595,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    ShowMessage("ChoiceUnInstall", "service déja désinstallé", true);
+                    ShowMessage("ChoiceUnInstall", "Service already uninstalled", true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceUnInstall", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceUnInstall", WinService.ErrorCode.ERROR_NotAllowed, true);
             }
         }
 
@@ -635,7 +613,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -649,135 +627,113 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_FileNotFound, true);
+                    SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_FileNotFound, true);
                 }
             }
             else
             {
-                SetAndShowError("ChoiceEncryptDecrypt", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
 
-        private static void ChoiceListApp()
+        private static void ChoiceList()
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceListApp", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceList", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
+            ShowMessage("List of shortcuts (allowed applications):");
             if (_section.AllowedApps.Count != 0)
             {
-                System.Console.WriteLine("Liste des applications disponibles en mode Administrateur");
                 foreach (AllowedAppElement item in _section.AllowedApps)
                 {
-                    System.Console.WriteLine(string.Format("Raccourci: {0} ==> Application: {1}", item.Shortcut, item.Path));
+                    ShowMessage(string.Format("{0} : {1}", item.Shortcut, item.Path));
                 }
             }
             else
             {
-                SetAndShowError("ChoiceListApp", WinService.MeErrorCode.ERROR_ListEmpty, true);
+                System.Console.WriteLine("N/A");
             }
         }
 
-        private static void ChoiceService()
+        private static void ChoiceStatus()
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceService", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceStatus", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
             try
             {
-                ShowMessage("ChoiceService", string.Format("Le service {0} est installé={1} et est à l'état={2}", _serviceController.ServiceName, IsInstalled(), _serviceController.Status), true);
+                ShowMessage(string.Format("{0} service status:\n  Installed: {1}\n  Status: {2}", _serviceController.ServiceName, IsInstalled(), _serviceController.Status));
             }
             catch (Exception ex)
             {
-                ShowMessage("ChoiceService", ex.Message, true);
+                ShowMessage("ERROR: " + ex.Message);
                 _commandExitCode = -1;
             }
-
         }
 
         private static void ChoiceHelp()
         {
-            if (_argCount != 1)
-            {
-                ShowMessage("ChoiceHelp", "trop d'arguments", true);
-                return;
-            }
-            System.Console.WriteLine("USAGE: LessUACRunnerConsole.exe");
-            System.Console.WriteLine("\t-help  \t\t: {0}", "Get help");
-            System.Console.WriteLine("\t-info  \t\t: {0}", "Get version infos");
-            System.Console.WriteLine("\t* -configa [shortcut] \"path\\filename\" [\"file arguments\"] [-console]");
-            System.Console.WriteLine("\t \t{0}", ": Add shortcut, file path and arguments in App.config");
-            System.Console.WriteLine("\tExamples:");
-            System.Console.WriteLine("\t\t-configa {0}", "\"path\\filename\"");
-            System.Console.WriteLine("\t\t-configa {0}", "shortcut \"path\\filename\"");
-            System.Console.WriteLine("\t\t-configa {0}", "\"path\\filename\" \"file arguments\"");
-            System.Console.WriteLine("\t\t-configa {0}", "shortcut \"path\\filename\" \"file arguments\"");
-            System.Console.WriteLine("\t* -configd shortcut");
-            System.Console.WriteLine("\t \t{0}", ": Delete file path (and arguments) from App.config");
-            System.Console.WriteLine("\t* -start  \t: {0}", "Start the service");
-            System.Console.WriteLine("\t* -stop  \t: {0}", "Stop the service");
-            System.Console.WriteLine("\t* -restart  \t: {0}", "Stop and Start the service");
-            System.Console.WriteLine("\t* -install  \t: {0}", "Install service");
-            System.Console.WriteLine("\t* -uninstall  \t: {0}", "Uninstall service");
-            System.Console.WriteLine("\t  -service  \t: {0}", "Service status");
-            System.Console.WriteLine("\t* -encrypt  \t: {0}", "Encrypt App.config");
-            System.Console.WriteLine("\t* -decrypt  \t: {0}", "Decrypt App.config");
-            System.Console.WriteLine("\t  -listapp  \t: {0}", "Launchable applications");
-            System.Console.WriteLine("\t** shortcut  \t: {0}", "File to execute");
-            System.Console.WriteLine("\tExamples:");
-            System.Console.WriteLine("\t\tLessUACRunnerConsole.exe shortcut");
-            System.Console.WriteLine("\t\tLessUACRunnerConsole.exe shortcut {0}", "\"file arguments\"");
-            System.Console.WriteLine("\t* \t {0}", "(Must be RunAS Administrator)");
-            System.Console.WriteLine("\t** \t {0}", "(Must be approved in App.config)");
+            System.Console.WriteLine("LessUACRunner v" + _ConsoleProductVersion);
+            System.Console.WriteLine("Usage: " + commandExeName + " [OPTION|SHORTCUT]");
+
+            System.Console.WriteLine("\nBasic privileges:");
+            System.Console.WriteLine("  -help    : {0}", "Get help");
+            System.Console.WriteLine("  -version : {0}", "Get version infos");
+            System.Console.WriteLine("  -status  : {0}", "Service status");
+            System.Console.WriteLine("  -list    : {0}", "List of shortcuts (allowed applications)");
+            System.Console.WriteLine("  shortcut : {0}", "App to execute (must be added in App.config via -configa)");
+            System.Console.WriteLine("             examples :");
+            System.Console.WriteLine("               " + commandExeName + " {0}", "shortcut");
+            System.Console.WriteLine("               " + commandExeName + " {0}", "shortcut \"file arguments\"");
+
+            System.Console.WriteLine("\nAdministrator privileges:");
+            System.Console.WriteLine("  -configa   : {0}", "Add shortcut, file path and arguments in App.config");
+            System.Console.WriteLine("               args     : {0}", "[shortcut] app_path [app_args] [-console]");
+            System.Console.WriteLine("                 app_path : {0}", "path to the executable application");
+            System.Console.WriteLine("                 app_args : {0}", "arguments for your application");
+            System.Console.WriteLine("                 -console : {0}", "is console application");
+            System.Console.WriteLine("               examples :");
+            System.Console.WriteLine("                 -configa {0}", "app_path");
+            System.Console.WriteLine("                 -configa {0}", "shortcut app_path");
+            System.Console.WriteLine("                 -configa {0}", "app_path app_args");
+            System.Console.WriteLine("                 -configa {0}", "shortcut app_path app_args");
+            System.Console.WriteLine("  -configd   : {0}", "Delete file path (and arguments) from App.config");
+            System.Console.WriteLine("               args : {0}", "shortcut");
+            System.Console.WriteLine("  -start     : {0}", "Start the service");
+            System.Console.WriteLine("  -stop      : {0}", "Stop the service");
+            System.Console.WriteLine("  -restart   : {0}", "Stop and Start the service");
+            System.Console.WriteLine("  -install   : {0}", "Install service");
+            System.Console.WriteLine("  -uninstall : {0}", "Uninstall service");
+            System.Console.WriteLine("  -encrypt   : {0}", "Encrypt App.config");
+            System.Console.WriteLine("  -decrypt   : {0}", "Decrypt App.config");
         }
 
-        private static void ChoiceInfo()
+        private static void ChoiceVersion()
         {
-            System.Console.WriteLine("===============");
-            System.Console.WriteLine("PRODUCT VERSION:");
-            System.Console.WriteLine("=======================");
-            System.Console.WriteLine("LessUACRunnerConsole.exe \tConsole Assembly Name: {0}", _ConsoleAssemblyName);
-            System.Console.WriteLine("LessUACRunnerConsole.exe \tConsole Product Version: {0}", _ConsoleProductVersion);
-            System.Console.WriteLine("LessUACRunnerConsole.exe \tConsole Assembly Version: {0}", _ConsoleAssemblyVersion);
-            System.Console.WriteLine("LessUACRunnerConsole.exe \tConsole Assembly File Version: {0}", _ConsoleAssemblyFileVersion);
-            System.Console.WriteLine("LessUACRunnerService.exe \tService Assembly Name: {0}", _ServiceAssemblyName);
-            System.Console.WriteLine("LessUACRunnerService.exe \tService Product Version: {0}", _ServiceProductVersion);
-            System.Console.WriteLine("LessUACRunnerService.exe \tService Assembly Version: {0}", _ServiceAssemblyVersion);
-            System.Console.WriteLine("LessUACRunnerService.exe \tService Assembly File Version: {0}", _ServiceAssemblyFileVersion);
-            System.Console.WriteLine("============");
-            System.Console.WriteLine("INFOS SYSTEM:");
-            System.Console.WriteLine("=======================");
-            System.Console.WriteLine("OS VERSION \t\t: {0}", Environment.OSVersion.ToString());
-            System.Console.WriteLine("OS VERSION VIA WMI \t: {0}", WmiGetVersion());
-            System.Console.WriteLine(".NET FRAMEWORK VERSION \t: {0}", FrameWorkVersion());
-            System.Console.WriteLine("CLR VERSION \t\t: {0}", Environment.Version.ToString());
-            System.Console.WriteLine("========================================");
-            System.Console.WriteLine(".NET FRAMEWORK INSTALLED ON THIS MACHINE");
-            System.Console.WriteLine("========================================");
-            GetVersionFromRegistry();
+            System.Console.WriteLine("LessUACRunner");
+            System.Console.WriteLine("  Console : v{0}", _ConsoleProductVersion);
+            System.Console.WriteLine("  Service : v{0}", _ServiceProductVersion);
+
+            System.Console.WriteLine("System");
+            System.Console.WriteLine("  OS             : {0}", Environment.OSVersion.ToString());
+            System.Console.WriteLine("  .NET Framework : {0}", FrameWorkVersion());
+            System.Console.WriteLine("  CLR            : {0}", Environment.Version.ToString());
         }
 
         private static void ChoiceRunTheProcess(string[] args)
         {
-            // Command exemple: shortcut "c:\sample.txt" -console or shortcut "c:\sample.txt" or shortcut
-            // values in app.settings can be:
-            // appToRun.shortcut only
-            // appToRun.shortcut and appToRun.shortcut.args
-            // appToRun.shortcut can be:
-            // path/filename only
-            // path/filename with -console
-            // 
             if (!IsInstalled())
             {
                 return;
             }
             if (_argCount > 2)
             {
-                SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_NumArguments, true);
+                SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
             try
@@ -789,13 +745,13 @@ namespace LessUACRunner.Console
                 }
                 if (!isShortcutExist)
                 {
-                    SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_NotAllowed, true);
+                    SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_NotAllowed, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess Sorry you cannot run this application in admin mode !", DateTime.Now));
                     return;
                 }
                 else
                 {
-                    // _section.AllowedApps[args[0]].Path = path/filename [-console]
+                    // _section.AllowedApps[args[0]].Path = app_path [-console]
                     // Add (DNP) with GUID (LESS_UAC_RUNNER-PIPE-DAT-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX) if -console
                     string pipeName = "LESS_UAC_RUNNER-PIPE-DAT-" + Guid.NewGuid();
 
@@ -849,7 +805,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError("ChoiceRunTheProcess", WinService.MeErrorCode.ERROR_FileNotFound, true);
+                        SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_FileNotFound, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess file unreachable: {1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
                         return;
                     }
@@ -870,7 +826,7 @@ namespace LessUACRunner.Console
         private static bool IsInstalled()
         {
             using (ServiceController controller =
-                new ServiceController(serviceName))
+                new ServiceController(_serviceName))
             {
                 try
                 {
@@ -887,7 +843,7 @@ namespace LessUACRunner.Console
         private static bool IsRunning()
         {
             using (ServiceController controller =
-                new ServiceController(serviceName))
+                new ServiceController(_serviceName))
             {
                 if (!IsInstalled()) return false;
                 return (controller.Status == ServiceControllerStatus.Running);
@@ -973,7 +929,7 @@ namespace LessUACRunner.Console
             if (!IsInstalled()) return;
 
             using (ServiceController controller =
-                new ServiceController(serviceName))
+                new ServiceController(_serviceName))
             {
                 try
                 {
@@ -995,7 +951,7 @@ namespace LessUACRunner.Console
         {
             if (!IsInstalled()) return;
             using (ServiceController controller =
-                new ServiceController(serviceName))
+                new ServiceController(_serviceName))
             {
                 try
                 {
@@ -1022,7 +978,7 @@ namespace LessUACRunner.Console
         {
             if (IsInstalled()) return;
 
-            string args = string.Format("create {0} start=auto binpath=\"{1}\" ", serviceName, _servicePath);
+            string args = string.Format("create {0} start=auto binpath=\"{1}\" ", _serviceName, _servicePath);
 
             // Install service
             ProcessStartInfo startInfo = new ProcessStartInfo("sc.exe");
@@ -1033,7 +989,7 @@ namespace LessUACRunner.Console
 
             // Service description
             ProcessStartInfo startInfod = new ProcessStartInfo("sc.exe");
-            args = string.Format("description {0}  \"{1}\"", serviceName);
+            args = string.Format("description {0}  \"{1}\"", _serviceName);
             ShowMessage("install", args, true);
             startInfod.Arguments = args;
             startInfod.WindowStyle = ProcessWindowStyle.Hidden;
@@ -1041,7 +997,7 @@ namespace LessUACRunner.Console
 
             // Start service
             ProcessStartInfo startInfos = new ProcessStartInfo("sc.exe");
-            args = string.Format("start {0}", serviceName);
+            args = string.Format("start {0}", _serviceName);
             ShowMessage("install", args, true);
             startInfos.Arguments = args;
             startInfos.WindowStyle = ProcessWindowStyle.Hidden;
@@ -1056,7 +1012,7 @@ namespace LessUACRunner.Console
         {
             if (!IsInstalled()) return;
 
-            string args = string.Format("delete {0}", serviceName);
+            string args = string.Format("delete {0}", _serviceName);
 
             ProcessStartInfo startInfo = new ProcessStartInfo("sc.exe");
             startInfo.Arguments = args;
@@ -1087,87 +1043,6 @@ namespace LessUACRunner.Console
             Trace.WriteLine("");
         }
 
-        private static string WmiGetVersion()
-        {
-            string version = string.Empty;
-            try
-            {
-                ManagementObjectSearcher searcher =
-                    new ManagementObjectSearcher("root\\CIMV2",
-                    "SELECT * FROM Win32_OperatingSystem");
-
-                foreach (ManagementObject queryObj in searcher.Get())
-                {
-                    version = queryObj["Version"].ToString();
-                }
-            }
-            catch (ManagementException e)
-            {
-                ShowMessage("WmiGetVersion", e.Message, false);
-            }
-            return version;
-        }
-
-        private static void GetVersionFromRegistry()
-        {
-            // Opens the registry key for the .NET Framework entry.
-            using (RegistryKey ndpKey =
-                RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, "").
-                OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\"))
-            {
-                // As an alternative, if you know the computers you will query are running .NET Framework 4.5 
-                // or later, you can use:
-                // using (RegistryKey ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, 
-                // RegistryView.Registry32).OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\"))
-                foreach (string versionKeyName in ndpKey.GetSubKeyNames())
-                {
-                    if (versionKeyName.StartsWith("v"))
-                    {
-
-                        RegistryKey versionKey = ndpKey.OpenSubKey(versionKeyName);
-                        string name = (string)versionKey.GetValue("Version", "");
-                        string sp = versionKey.GetValue("SP", "").ToString();
-                        string install = versionKey.GetValue("Install", "").ToString();
-                        if (install == "") //no install info, must be later.
-                            System.Console.WriteLine(versionKeyName + "  " + name);
-                        else
-                        {
-                            if (sp != "" && install == "1")
-                            {
-                                System.Console.WriteLine(versionKeyName + "  " + name + "  SP" + sp);
-                            }
-
-                        }
-                        if (name != "")
-                        {
-                            continue;
-                        }
-                        foreach (string subKeyName in versionKey.GetSubKeyNames())
-                        {
-                            RegistryKey subKey = versionKey.OpenSubKey(subKeyName);
-                            name = (string)subKey.GetValue("Version", "");
-                            if (name != "")
-                                sp = subKey.GetValue("SP", "").ToString();
-                            install = subKey.GetValue("Install", "").ToString();
-                            if (install == "") //no install info, must be later.
-                                System.Console.WriteLine(versionKeyName + "  " + name);
-                            else
-                            {
-                                if (sp != "" && install == "1")
-                                {
-                                    System.Console.WriteLine("  " + subKeyName + "  " + name + "  SP" + sp);
-                                }
-                                else if (install == "1")
-                                {
-                                    System.Console.WriteLine("  " + subKeyName + "  " + name);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         private static string FrameWorkVersion()
         {
             string version = Assembly
@@ -1189,12 +1064,12 @@ namespace LessUACRunner.Console
 
                 if (encrypt && _section.SectionInformation.IsProtected)
                 {
-                    SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_SectionAlreadyProtected, true);
+                    SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_SectionAlreadyProtected, true);
                     return;
                 }
                 if (!encrypt && !_section.SectionInformation.IsProtected)
                 {
-                    SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_SectionAlreadyNotProtected, true);
+                    SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_SectionAlreadyNotProtected, true);
                     return;
                 }
                 if (encrypt && !_section.SectionInformation.IsProtected)
@@ -1255,7 +1130,7 @@ namespace LessUACRunner.Console
             string fileName = asem.Location;
             if (!File.Exists(fileName))
             {
-                SetAndShowError("EncryptDecryptAppSettings", WinService.MeErrorCode.ERROR_FileNotFound, true);
+                SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_FileNotFound, true);
                 return false;
             }
 
@@ -1281,14 +1156,19 @@ namespace LessUACRunner.Console
             switch (type)
             {
                 case true:
-                    System.Console.WriteLine(string.Format("INFO: from {0}: {1}", source, message));
+                    System.Console.WriteLine(string.Format("[{0}] {1}", source, message));
                     break;
                 case false:
-                    System.Console.WriteLine(string.Format("ERROR: from {0}: {1}", source, message));
+                    System.Console.WriteLine(string.Format("[{0}] ERROR: {1}", source, message));
                     break;
                 default:
                     break;
             }
+        }
+
+        private static void ShowMessage(string message)
+        {
+            System.Console.WriteLine(message);
         }
 
         /// <summary>
@@ -1296,11 +1176,10 @@ namespace LessUACRunner.Console
         /// </summary>
         /// <param name="errorCode"></param>
         /// <param name="type">true = message false = error</param>
-        private static void SetAndShowError(string source, WinService.MeErrorCode errorCode, bool type)
+        private static void SetAndShowError(string source, WinService.ErrorCode errorCode, bool type)
         {
             _commandExitCode = (int)errorCode;
             ShowMessage(source, WinService.LessError.GetEnumDescription(errorCode), type);
-
         }
 
         #endregion

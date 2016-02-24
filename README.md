@@ -6,6 +6,7 @@ Launch windows application without UAC prompt and with admin privileges.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [About](#about)
+- [Usage](#usage)
 - [Download](#download)
 - [Changelog](#changelog)
 - [License](#license)
@@ -25,6 +26,43 @@ Tested on :
 * Windows 8 Pro 64-bits
 * Windows 8.1 Pro 64-bits
 * Windows 10 Pro 64-bits
+
+## Usage
+
+```
+Usage: LessUACRunnerConsole.exe [OPTION|SHORTCUT]
+
+Basic privileges:
+  -help    : Get help
+  -version : Get version infos
+  -status  : Service status
+  -list    : List of shortcuts (allowed applications)
+  shortcut : App to execute (must be added in App.config via -configa)
+             examples :
+               LessUACRunnerConsole.exe shortcut
+               LessUACRunnerConsole.exe shortcut "file arguments"
+
+Administrator privileges:
+  -configa   : Add shortcut, file path and arguments in App.config
+               args     : [shortcut] app_path [app_args] [-console]
+                 app_path : path to the executable application
+                 app_args : arguments for your application
+                 -console : is console application
+               examples :
+                 -configa app_path
+                 -configa shortcut app_path
+                 -configa app_path app_args
+                 -configa shortcut app_path app_args
+  -configd   : Delete file path (and arguments) from App.config
+               args : shortcut
+  -start     : Start the service
+  -stop      : Stop the service
+  -restart   : Stop and Start the service
+  -install   : Install service
+  -uninstall : Uninstall service
+  -encrypt   : Encrypt App.config
+  -decrypt   : Decrypt App.config
+```
 
 ## Download
 
