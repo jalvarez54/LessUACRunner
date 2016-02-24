@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApplicationLoader.cs" />
+    <Compile Include="LessError.cs" />
     <Compile Include="LoaderService.cs">
       <SubType>Component</SubType>
     </Compile>
