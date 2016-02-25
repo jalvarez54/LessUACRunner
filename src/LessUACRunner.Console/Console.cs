@@ -91,7 +91,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception)
             {
-                SetAndShowError("Main", WinService.ErrorCode.ERROR_FileCorrupted, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileCorrupted, true);
                 return -1;
             }
             _section = _configuration.GetSection(sectionName) as AllowedAppsSection;
@@ -150,7 +150,7 @@ namespace LessUACRunner.Console
                 // If not encypted permit only -encrypt, -help and -install
                 if (!IsEncrypted() && args[0] != "-encrypt" && args[0] != "-help" && args[0] != "-install")
                 {
-                    SetAndShowError("Main", WinService.ErrorCode.ERROR_FileNotCrypted, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotCrypted, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main IsEncrypted ?: {1}", DateTime.Now, IsAdmin()));
                     return _commandExitCode;
                 }
@@ -158,7 +158,7 @@ namespace LessUACRunner.Console
 
             if (!IsInstalled())
             {
-                SetAndShowError("Main", WinService.ErrorCode.ERROR_ServiceNotInstalled, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_ServiceNotInstalled, true);
                 ShowMessage("WARNING: Service not installed\n");
             }
 
@@ -251,13 +251,13 @@ namespace LessUACRunner.Console
                     }
                     catch (System.TimeoutException ex)
                     {
-                        SetAndShowError("ReadReturnFromPipe", WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
+                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                         return string.Empty;
                     }
                     catch (Exception ex)
                     {
-                        ShowMessage("ReadReturnFromPipe", ex.Message, false);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                         _commandExitCode = -1;
                         return string.Empty;
@@ -277,7 +277,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception ex)
             {
-                ShowMessage("ReadReturnFromPipe", ex.Message, false);
+                ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                 _commandExitCode = -1;
                 return string.Empty;
@@ -307,12 +307,12 @@ namespace LessUACRunner.Console
                 }
                 catch (System.TimeoutException)
                 {
-                    SetAndShowError("WriteApplicationNameInPipe", WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
                     return false;
                 }
                 catch (Exception ex)
                 {
-                    ShowMessage("WriteApplicationNameInPipe", ex.Message, false);
+                    ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
                     _commandExitCode = -1;
                     return false;
                 }
@@ -346,7 +346,7 @@ namespace LessUACRunner.Console
 
                 if (_argCount < 2)
                 {
-                    SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                     return;
                 }
                 // -configa [shortcut] app_path [app_args] [-console]
@@ -359,12 +359,12 @@ namespace LessUACRunner.Console
                     ae.Path = args[1];
                     ae.Args = (_argCount == 3) ? args[2] : string.Empty;
                 }
-                // -configa [shortcut] app_path [app_args] [-console]
+                // -configa [shortcut] app_path [app_args] [-console] 
                 else
                 {
                     if (_argCount < 3)
                     {
-                        SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                         return;
                     }
                     // -configa [shortcut] app_path [app_args] [-console]
@@ -376,7 +376,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_FileNotFound, true);
+                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
                         return;
                     }
                 }
@@ -389,13 +389,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_KeyExist, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_KeyExist, true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceConfigAdd", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -405,7 +405,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 2)
             {
-                SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -419,13 +419,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_KeyNotExist, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_KeyNotExist, true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceConfigDelete", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -434,7 +434,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceStart", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -445,25 +445,25 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        ShowMessage("ChoiceStart", "Starting service...", true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Starting service...", true);
                         _serviceController.Start();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Running);
-                        ShowMessage("ChoiceStart", "Service status: " + _serviceController.Status, true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service status: " + _serviceController.Status, true);
                     }
                     else
                     {
-                        ShowMessage("ChoiceStart", "Service already started", true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already started", true);
                     }
                 }
                 catch (Exception e)
                 {
-                    ShowMessage("ChoiceStart", "exception " + e.Message, false);
+                    ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
                     _commandExitCode = -1;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceStart", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -472,7 +472,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceStop", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -483,27 +483,27 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        ShowMessage("ChoiceStop", "Service already stopped", true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already stopped", true);
                     }
                     else
                     {
                         // Stop the service if its status is not set to "Stopped".
-                        ShowMessage("ChoiceStart", "Stopping service...", true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Stopping service...", true);
                         WriteApplicationNameInPipe("-killThread");
                         _serviceController.Stop();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
-                        ShowMessage("ChoiceStop", "Service status: " + _serviceController.Status, true);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service status: " + _serviceController.Status, true);
                     }
                 }
                 catch (Exception e)
                 {
-                    ShowMessage("ChoiceStop", "exception " + e.Message, false);
+                    ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
                     _commandExitCode = -1;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceStop", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -518,7 +518,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceInstall", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -533,7 +533,7 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
                         _commandExitCode = -1;
                         return;
                     }
@@ -544,20 +544,20 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
                         _commandExitCode = -1;
                         return;
                     }
                 }
                 else
                 {
-                    ShowMessage("ChoiceInstall", "Service already installed", true);
+                    ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already installed", true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceInstall", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
 
@@ -567,7 +567,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceUnInstall", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -588,20 +588,20 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage("ChoiceInstall", "exception " + e.Message, false);
+                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
                         _commandExitCode = -1;
                         return;
                     }
                 }
                 else
                 {
-                    ShowMessage("ChoiceUnInstall", "Service already uninstalled", true);
+                    ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already uninstalled", true);
                     return;
                 }
             }
             else
             {
-                SetAndShowError("ChoiceUnInstall", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
             }
         }
 
@@ -613,7 +613,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
 
@@ -627,12 +627,12 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_FileNotFound, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
                 }
             }
             else
             {
-                SetAndShowError("ChoiceEncryptDecrypt", WinService.ErrorCode.ERROR_NotAllowed, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                 return;
             }
         }
@@ -641,7 +641,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceList", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
             ShowMessage("List of shortcuts (allowed applications):");
@@ -662,7 +662,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError("ChoiceStatus", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
             try
@@ -733,7 +733,7 @@ namespace LessUACRunner.Console
             }
             if (_argCount > 2)
             {
-                SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_InvalidArguments, true);
+                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
                 return;
             }
             try
@@ -745,7 +745,7 @@ namespace LessUACRunner.Console
                 }
                 if (!isShortcutExist)
                 {
-                    SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_NotAllowed, true);
+                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
                     Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess Sorry you cannot run this application in admin mode !", DateTime.Now));
                     return;
                 }
@@ -805,7 +805,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError("ChoiceRunTheProcess", WinService.ErrorCode.ERROR_FileNotFound, true);
+                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
                         Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess file unreachable: {1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
                         return;
                     }
@@ -813,7 +813,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception e)
             {
-                ShowMessage("ChoiceRunTheProcess", e.Message, false);
+                ShowMessage(MethodBase.GetCurrentMethod().Name, e.Message, false);
                 Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess exception: {1}", DateTime.Now, e.Message));
                 _commandExitCode = -1;
             }
@@ -970,59 +970,8 @@ namespace LessUACRunner.Console
         }
         #endregion
 
-        #region Service Installer *** OBSOLETE ***
-        // http://dotnetstep.blogspot.fr/2009/06/install-window-service-without-using.html
-        // https://technet.microsoft.com/en-us/library/bb490995.aspx
-        [Obsolete]
-        private static void install()
-        {
-            if (IsInstalled()) return;
-
-            string args = string.Format("create {0} start=auto binpath=\"{1}\" ", _serviceName, _servicePath);
-
-            // Install service
-            ProcessStartInfo startInfo = new ProcessStartInfo("sc.exe");
-            startInfo.Arguments = args;
-            ShowMessage("install", args, true);
-            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            Process.Start(startInfo);
-
-            // Service description
-            ProcessStartInfo startInfod = new ProcessStartInfo("sc.exe");
-            args = string.Format("description {0}  \"{1}\"", _serviceName);
-            ShowMessage("install", args, true);
-            startInfod.Arguments = args;
-            startInfod.WindowStyle = ProcessWindowStyle.Hidden;
-            Process.Start(startInfod);
-
-            // Start service
-            ProcessStartInfo startInfos = new ProcessStartInfo("sc.exe");
-            args = string.Format("start {0}", _serviceName);
-            ShowMessage("install", args, true);
-            startInfos.Arguments = args;
-            startInfos.WindowStyle = ProcessWindowStyle.Hidden;
-            Process.Start(startInfos);
-
-            return;
-        }
-
-        // https://technet.microsoft.com/en-us/library/bb490995.aspx
-        [Obsolete]
-        private static void uninstall()
-        {
-            if (!IsInstalled()) return;
-
-            string args = string.Format("delete {0}", _serviceName);
-
-            ProcessStartInfo startInfo = new ProcessStartInfo("sc.exe");
-            startInfo.Arguments = args;
-            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            Process.Start(startInfo);
-            return;
-        }
-        #endregion
-
         #region Utils
+
         private static void TraceInit()
         {
             string displayName = "LessUACRunnerConsole.TraceLevelSwitch";

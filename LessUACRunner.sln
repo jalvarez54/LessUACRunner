@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5DB2CF5F-CEF1-48A5-A532-A3959F85D0CA}"
+	ProjectSection(SolutionItems) = preProject
+		build.xml = build.xml
+		CHANGELOG.md = CHANGELOG.md
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LessUACRunner.Console", "src\LessUACRunner.Console\LessUACRunner.Console.csproj", "{196EE9F2-C65C-4D6B-9D25-C47FF0AD354D}"
 EndProject
