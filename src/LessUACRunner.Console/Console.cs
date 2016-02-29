@@ -76,6 +76,7 @@ namespace LessUACRunner.Console
         #endregion
 
         #region MAIN
+
         /// <summary>
         /// Parse command line and call WriteApplicationNameInPipe method.
         /// </summary>
@@ -91,7 +92,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileCorrupted, true);
+                ManageErrors(WinService.ErrorCode.ERROR_FileCorrupted);
                 return -1;
             }
             _section = _configuration.GetSection(sectionName) as AllowedAppsSection;
@@ -106,9 +107,9 @@ namespace LessUACRunner.Console
             _serviceController = new ServiceController(_serviceName);
 
             Trace.WriteLineIf(_traceSwitch.TraceVerbose, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: OS : {1}", DateTime.Now, Environment.OSVersion.ToString()));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: .NET Framework : {1}", DateTime.Now, FrameWorkVersion()));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: CLR : {1}", DateTime.Now, Environment.Version.ToString()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: OS : {1}", DateTime.Now, Environment.OSVersion.ToString()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: .NET Framework : {1}", DateTime.Now, FrameWorkVersion()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: CLR : {1}", DateTime.Now, Environment.Version.ToString()));
             try
             {
                 _ConsoleAssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -126,46 +127,44 @@ namespace LessUACRunner.Console
                 _ServiceProductVersion = fvis.ProductVersion;
                 _ServiceAssemblyName = fvis.ProductName;
 
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console Assembly Name: {1}", DateTime.Now, _ConsoleAssemblyName));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console Product Version: {1}", DateTime.Now, _ConsoleProductVersion));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console Assembly Version: {1}", DateTime.Now, _ConsoleAssemblyVersion));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console Assembly File Version: {1}", DateTime.Now, _ConsoleAssemblyFileVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console Assembly Name: {1}", DateTime.Now, _ConsoleAssemblyName));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console Product Version: {1}", DateTime.Now, _ConsoleProductVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console Assembly Version: {1}", DateTime.Now, _ConsoleAssemblyVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console Assembly File Version: {1}", DateTime.Now, _ConsoleAssemblyFileVersion));
 
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Service Assembly Name: {1}", DateTime.Now, _ServiceAssemblyName));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Service Product Version: {1}", DateTime.Now, _ServiceProductVersion));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Service Assembly Version: {1}", DateTime.Now, _ServiceAssemblyVersion));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Service Assembly File Version: {1}", DateTime.Now, _ServiceAssemblyFileVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Service Assembly Name: {1}", DateTime.Now, _ServiceAssemblyName));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Service Product Version: {1}", DateTime.Now, _ServiceProductVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Service Assembly Version: {1}", DateTime.Now, _ServiceAssemblyVersion));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Service Assembly File Version: {1}", DateTime.Now, _ServiceAssemblyFileVersion));
             }
             catch (Exception ex)
             {
-                ShowMessage("Main", ex.Message, false);
+                ManageErrors(ex.Message);
             }
             #endregion
 
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main User: {1}", DateTime.Now, Environment.UserName));
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main IsAdmin ?: {1}", DateTime.Now, IsAdmin()));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console.Main User: {1}", DateTime.Now, Environment.UserName));
+            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: Console.Main IsAdmin ?: {1}", DateTime.Now, IsAdmin()));
 
             if (!IsAdmin())
             {
                 // If not encypted permit only -encrypt, -help and -install
                 if (!IsEncrypted() && args[0] != "-encrypt" && args[0] != "-help" && args[0] != "-install")
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotCrypted, true);
-                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main IsEncrypted ?: {1}", DateTime.Now, IsAdmin()));
+                    ManageErrors(WinService.ErrorCode.ERROR_FileNotCrypted);
                     return _commandExitCode;
                 }
             }
 
             if (!IsInstalled())
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_ServiceNotInstalled, true);
-                ShowMessage("WARNING: Service not installed\n");
+                ManageErrors(WinService.ErrorCode.ERROR_ServiceNotInstalled);
             }
 
             _argCount = args.Count();
             if (_argCount > 0)
             {
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: Console.Main Choice: {1}", DateTime.Now, args[0]));
+                ManageErrors(args[0]);
 
                 switch (args[0])
                 {
@@ -221,7 +220,7 @@ namespace LessUACRunner.Console
             if (_console)
             {
                 System.Console.WriteLine(_jsonReturnedData);
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ElapsedTime on Windows Service: {1}", DateTime.Now, _processReturnObject.ElapsedTime));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ElapsedTime on Windows Service: {1}", DateTime.Now, _processReturnObject.ElapsedTime));
             }
 
             return (_commandExitCode);
@@ -240,7 +239,7 @@ namespace LessUACRunner.Console
             {
                 using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.In))
                 {
-                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
+                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
 
                     // Connect to the pipe or wait until the pipe is available.
                     string timeOut = System.Configuration.ConfigurationManager.AppSettings["PipeConnectTimeOut"];
@@ -251,25 +250,25 @@ namespace LessUACRunner.Console
                     }
                     catch (System.TimeoutException ex)
                     {
-                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
-                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
+                        ManageErrors(WinService.ErrorCode.ERROR_NPConnectTimeOut);
+                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                         return string.Empty;
                     }
                     catch (Exception ex)
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
-                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
+                        ManageErrors(ex.Message);
+                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                         _commandExitCode = -1;
                         return string.Empty;
                     }
 
-                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe connected to pipe: {1}", DateTime.Now, pipeName));
+                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe connected to pipe: {1}", DateTime.Now, pipeName));
 
                     // Read in the pipe proces return.
                     using (StreamReader sr = new StreamReader(pipeClient))
                     {
                         returnData = sr.ReadToEnd();
-                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe read data: {1}", DateTime.Now, returnData));
+                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe read data: {1}", DateTime.Now, returnData));
 
                     }
                 }
@@ -277,8 +276,8 @@ namespace LessUACRunner.Console
             }
             catch (Exception ex)
             {
-                ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
+                ManageErrors(ex.Message);
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ReadReturnFromPipe exception: {1}", DateTime.Now, ex.Message));
                 _commandExitCode = -1;
                 return string.Empty;
             }
@@ -297,7 +296,7 @@ namespace LessUACRunner.Console
             using (NamedPipeClientStream pipeClient =
                 new NamedPipeClientStream(".", pipeName, PipeDirection.Out))
             {
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: WriteApplicationNameInPipe attempting to connect to pipe...: {1}", DateTime.Now, pipeName));
 
                 // Connect to the pipe or wait until the pipe is available.
                 string timeOut = System.Configuration.ConfigurationManager.AppSettings["PipeConnectTimeOut"];
@@ -307,18 +306,18 @@ namespace LessUACRunner.Console
                 }
                 catch (System.TimeoutException)
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NPConnectTimeOut, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_NPConnectTimeOut);
                     return false;
                 }
                 catch (Exception ex)
                 {
-                    ShowMessage(MethodBase.GetCurrentMethod().Name, ex.Message, false);
+                    ManageErrors(ex.Message);
                     _commandExitCode = -1;
                     return false;
                 }
 
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe connected to pipe: {1}", DateTime.Now, pipeName));
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: WriteApplicationNameInPipe writing in the pipe: {1}", DateTime.Now, applicationName));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: WriteApplicationNameInPipe connected to pipe: {1}", DateTime.Now, pipeName));
+                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: WriteApplicationNameInPipe writing in the pipe: {1}", DateTime.Now, applicationName));
 
                 // Write application name in the pipe and send that to the server process.
                 using (StreamWriter sw = new StreamWriter(pipeClient))
@@ -329,6 +328,7 @@ namespace LessUACRunner.Console
             }
             return true;
         }
+
         #endregion
 
         #region Command line parser methods
@@ -346,7 +346,7 @@ namespace LessUACRunner.Console
 
                 if (_argCount < 2)
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                     return;
                 }
                 // -configa [shortcut] app_path [app_args] [-console]
@@ -364,7 +364,7 @@ namespace LessUACRunner.Console
                 {
                     if (_argCount < 3)
                     {
-                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                        ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                         return;
                     }
                     // -configa [shortcut] app_path [app_args] [-console]
@@ -376,7 +376,7 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
+                        ManageErrors(WinService.ErrorCode.ERROR_FileNotFound);
                         return;
                     }
                 }
@@ -389,13 +389,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_KeyExist, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_KeyExist);
                     return;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
 
@@ -405,7 +405,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 2)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -419,13 +419,13 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_KeyNotExist, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_KeyNotExist);
                     return;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
         }
@@ -434,7 +434,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -445,25 +445,25 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Starting service...", true);
+                        ManageErrors("Starting service...");
                         _serviceController.Start();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Running);
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service status: " + _serviceController.Status, true);
+                        ManageErrors("Service status: " + _serviceController.Status);
                     }
                     else
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already started", true);
+                        ManageErrors("Service already started");
                     }
                 }
                 catch (Exception e)
                 {
-                    ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
+                    ManageErrors(e.Message);
                     _commandExitCode = -1;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
         }
@@ -472,7 +472,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -483,27 +483,27 @@ namespace LessUACRunner.Console
                     if ((_serviceController.Status.Equals(ServiceControllerStatus.Stopped)) ||
                     (_serviceController.Status.Equals(ServiceControllerStatus.StopPending)))
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already stopped", true);
+                        ManageErrors("Service already stopped");
                     }
                     else
                     {
                         // Stop the service if its status is not set to "Stopped".
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Stopping service...", true);
+                        ManageErrors("Stopping service...");
                         WriteApplicationNameInPipe("-killThread");
                         _serviceController.Stop();
                         _serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "Service status: " + _serviceController.Status, true);
+                        ManageErrors("Service status: " + _serviceController.Status);
                     }
                 }
                 catch (Exception e)
                 {
-                    ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
+                    ManageErrors(e.Message);
                     _commandExitCode = -1;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
         }
@@ -518,7 +518,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -533,7 +533,7 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
+                        ManageErrors(e.Message);
                         _commandExitCode = -1;
                         return;
                     }
@@ -544,20 +544,20 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
+                        ManageErrors(e.Message);
                         _commandExitCode = -1;
                         return;
                     }
                 }
                 else
                 {
-                    ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already installed", true);
+                    ManageErrors("Service already installed");
                     return;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
 
@@ -567,7 +567,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -588,20 +588,20 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception e)
                     {
-                        ShowMessage(MethodBase.GetCurrentMethod().Name, "exception " + e.Message, false);
+                        ManageErrors(e.Message);
                         _commandExitCode = -1;
                         return;
                     }
                 }
                 else
                 {
-                    ShowMessage(MethodBase.GetCurrentMethod().Name, "Service already uninstalled", true);
+                    ManageErrors("Service already uninstalled");
                     return;
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
             }
         }
 
@@ -613,7 +613,7 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
 
@@ -627,12 +627,12 @@ namespace LessUACRunner.Console
                 }
                 else
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_FileNotFound);
                 }
             }
             else
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
+                ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
                 return;
             }
         }
@@ -641,15 +641,15 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
-            ShowMessage("List of shortcuts (allowed applications):");
+            ManageErrors("List of shortcuts (allowed applications):");
             if (_section.AllowedApps.Count != 0)
             {
                 foreach (AllowedAppElement item in _section.AllowedApps)
                 {
-                    ShowMessage(string.Format("{0} : {1}", item.Shortcut, item.Path));
+                    ManageErrors(string.Format("{0} : {1}", item.Shortcut, item.Path));
                 }
             }
             else
@@ -662,16 +662,16 @@ namespace LessUACRunner.Console
         {
             if (_argCount != 1)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
             try
             {
-                ShowMessage(string.Format("{0} service status:\n  Installed: {1}\n  Status: {2}", _serviceController.ServiceName, IsInstalled(), _serviceController.Status));
+                ManageErrors(string.Format("{0} service status:\n  Installed: {1}\n  Status: {2}", _serviceController.ServiceName, IsInstalled(), _serviceController.Status));
             }
             catch (Exception ex)
             {
-                ShowMessage("ERROR: " + ex.Message);
+                ManageErrors(ex.Message);
                 _commandExitCode = -1;
             }
         }
@@ -733,7 +733,7 @@ namespace LessUACRunner.Console
             }
             if (_argCount > 2)
             {
-                SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_InvalidArguments, true);
+                ManageErrors(WinService.ErrorCode.ERROR_InvalidArguments);
                 return;
             }
             try
@@ -745,8 +745,8 @@ namespace LessUACRunner.Console
                 }
                 if (!isShortcutExist)
                 {
-                    SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_NotAllowed, true);
-                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess Sorry you cannot run this application in admin mode !", DateTime.Now));
+                    ManageErrors(WinService.ErrorCode.ERROR_NotAllowed);
+                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ChoiceRunTheProcess Sorry you cannot run this application in admin mode !", DateTime.Now));
                     return;
                 }
                 else
@@ -769,7 +769,7 @@ namespace LessUACRunner.Console
                     if (File.Exists(_section.AllowedApps[args[0]].Path))
                     {
                         //////// WRITE PROCESS NAME TO LAUNCHED IN CNP)
-                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling WriteApplicationNameInPipe arg={1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
+                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ChoiceRunTheProcess calling WriteApplicationNameInPipe arg={1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
 
                         var json = new JavaScriptSerializer().Serialize(controlData);
                         if (WriteApplicationNameInPipe(json))
@@ -781,18 +781,18 @@ namespace LessUACRunner.Console
                             _console = _section.AllowedApps[args[0]].Console;
                             if (_console)
                             {
-                                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess calling ReadReturnFromPipe arg={1}", DateTime.Now, pipeName));
+                                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ChoiceRunTheProcess calling ReadReturnFromPipe arg={1}", DateTime.Now, pipeName));
 
                                 _jsonReturnedData = ReadReturnFromPipe(pipeName);
                                 if (_jsonReturnedData != string.Empty)
                                 {
                                     // Extraction:
                                     _processReturnObject = new JavaScriptSerializer().Deserialize<ProcessReturn>(_jsonReturnedData);
-                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess read returnedData: {1}", DateTime.Now, _jsonReturnedData));
+                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ChoiceRunTheProcess read returnedData: {1}", DateTime.Now, _jsonReturnedData));
                                 }
                                 else
                                 {
-                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess nothing returned or error", DateTime.Now));
+                                    Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("[{0}]: ChoiceRunTheProcess nothing returned or error", DateTime.Now));
                                     return;
                                 }
                             }
@@ -805,19 +805,17 @@ namespace LessUACRunner.Console
                     }
                     else
                     {
-                        SetAndShowError(MethodBase.GetCurrentMethod().Name, WinService.ErrorCode.ERROR_FileNotFound, true);
-                        Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess file unreachable: {1}", DateTime.Now, _section.AllowedApps[args[0]].Path));
+                        ManageErrors(WinService.ErrorCode.ERROR_FileNotFound);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                ShowMessage(MethodBase.GetCurrentMethod().Name, e.Message, false);
-                Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: ChoiceRunTheProcess exception: {1}", DateTime.Now, e.Message));
+                ManageErrors(e.Message);
                 _commandExitCode = -1;
             }
-            Trace.WriteLineIf(_traceSwitch.TraceVerbose, string.Format("{0}: >>>>> ChoiceRunTheProcess job ended successfully", DateTime.Now));
+            Trace.WriteLine(string.Format("{0}: >>>>> ChoiceRunTheProcess job ended successfully", DateTime.Now));
         }
         #endregion
 
@@ -1013,12 +1011,12 @@ namespace LessUACRunner.Console
 
                 if (encrypt && _section.SectionInformation.IsProtected)
                 {
-                    SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_SectionAlreadyProtected, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_SectionAlreadyProtected);
                     return;
                 }
                 if (!encrypt && !_section.SectionInformation.IsProtected)
                 {
-                    SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_SectionAlreadyNotProtected, true);
+                    ManageErrors(WinService.ErrorCode.ERROR_SectionAlreadyNotProtected);
                     return;
                 }
                 if (encrypt && !_section.SectionInformation.IsProtected)
@@ -1030,11 +1028,11 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception ex)
                     {
-                        ShowMessage("EncryptAppSettings", ex.Message, false);
+                        ManageErrors(ex.Message);
                         _commandExitCode = -1;
                         return;
                     }
-                    ShowMessage("EncryptAppSettings", "encrypted successfully", true);
+                    ManageErrors("encrypted successfully");
 
                 }
                 if (!encrypt && _section.SectionInformation.IsProtected)
@@ -1045,11 +1043,11 @@ namespace LessUACRunner.Console
                     }
                     catch (Exception ex)
                     {
-                        ShowMessage("EncryptAppSettings", ex.Message, false);
+                        ManageErrors(ex.Message);
                         _commandExitCode = -1;
                         return;
                     }
-                    ShowMessage("EncryptAppSettings", "decrypted successfully", true);
+                    ManageErrors("decrypted successfully");
                 }
 
                 try
@@ -1059,7 +1057,7 @@ namespace LessUACRunner.Console
                 }
                 catch (Exception ex)
                 {
-                    ShowMessage("EncryptAppSettings", ex.Message, false);
+                    ManageErrors(ex.Message);
                     _commandExitCode = -1;
                 }
 #if DEBUG
@@ -1068,7 +1066,7 @@ namespace LessUACRunner.Console
             }
             catch (Exception ex)
             {
-                ShowMessage("EncryptAppSettings", ex.ToString(), false);
+                ManageErrors(ex.Message);
                 _commandExitCode = -1;
             }
         }
@@ -1079,7 +1077,7 @@ namespace LessUACRunner.Console
             string fileName = asem.Location;
             if (!File.Exists(fileName))
             {
-                SetAndShowError("EncryptDecryptAppSettings", WinService.ErrorCode.ERROR_FileNotFound, true);
+                ManageErrors(WinService.ErrorCode.ERROR_FileNotFound);
                 return false;
             }
 
@@ -1096,39 +1094,37 @@ namespace LessUACRunner.Console
         }
 
         /// <summary>
-        /// Display message (true) or error (false)
+        /// <code>info</code>  can be a simple string message or an error code of type WinService.ErrorCode.
+        /// If info == string message ==> do nothing or return -1 in the Main() or _commandExitCode = -1
+        /// If info == WinService.ErrorCode simply return, exit code is stored in global _commandExitCode.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="type">true = message false = error</param>
-        private static void ShowMessage(string source, string message, bool type)
+        /// <param name="info"></param>
+        private static void ManageErrors(object info)
         {
-            switch (type)
+
+            // Who call me
+            StackTrace stackTrace = new StackTrace();
+            StackFrame stackFrame = stackTrace.GetFrame(1);
+            MethodBase methodBase = stackFrame.GetMethod();
+
+            var infoType = info.GetType();
+
+            if (infoType == typeof(string))
             {
-                case true:
-                    System.Console.WriteLine(string.Format("[{0}] {1}", source, message));
-                    break;
-                case false:
-                    System.Console.WriteLine(string.Format("[{0}] ERROR: {1}", source, message));
-                    break;
-                default:
-                    break;
+                string mesPlus = string.Format("[{0}] [{1}] {2}", DateTime.Now, methodBase.Name, info.ToString());
+                System.Console.WriteLine(info.ToString());
+                Trace.WriteLine(mesPlus);
             }
-        }
+            else if(infoType == typeof(WinService.ErrorCode))
+            {
+                WinService.ErrorCode code = (WinService.ErrorCode)info;
+                string message = WinService.LessError.GetEnumDescription(code);
+                string mesPlus = string.Format("[{0}] [{1}] {2}", DateTime.Now, methodBase.Name, message);
+                System.Console.WriteLine(message);
+                Trace.WriteLine(mesPlus);
+                _commandExitCode = (int)code;
+            }
 
-        private static void ShowMessage(string message)
-        {
-            System.Console.WriteLine(message);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="errorCode"></param>
-        /// <param name="type">true = message false = error</param>
-        private static void SetAndShowError(string source, WinService.ErrorCode errorCode, bool type)
-        {
-            _commandExitCode = (int)errorCode;
-            ShowMessage(source, WinService.LessError.GetEnumDescription(errorCode), type);
         }
 
         #endregion
